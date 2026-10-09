@@ -1,0 +1,13 @@
+name: budget_buddy
+description: A Flutter project for managing budgets
+dependencies:
+  flutter:
+    sdk: flutter
+  integration_test: ^2.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test: ^2.0.0
+flutter:
+  integration_test:
+    integration_test: integration_test/app_accept_test.dart
