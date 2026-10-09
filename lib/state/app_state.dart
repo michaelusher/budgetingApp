@@ -24,6 +24,14 @@ class AppState extends ChangeNotifier {
   ExpectedBudget? expectedBudget;
   String currencyCode = 'USD';
 
+  /// Whether the budget advisor reminds the user they have room to spend.
+  /// Its overspending warnings have no switch — they're always on.
+  bool remindToSpend = true;
+
+  /// Whether the advisor's tips are reworded by Gemini (needs a Gemini key;
+  /// sends a short spending summary to Google).
+  bool aiTips = false;
+
   bool isLoaded = false;
 
   /// Completes when persisted state has been loaded (or load failed cleanly).
@@ -249,9 +257,19 @@ class AppState extends ChangeNotifier {
     _changed();
   }
 
+  void setRemindToSpend(bool value) {
+    remindToSpend = value;
+    _changed();
+  }
+
+  void setAiTips(bool value) {
+    aiTips = value;
+    _changed();
+  }
+
   // ── Recurring transactions ─────────────────────────────────────────────────
 
-  static DateTime _nextOccurrence(DateTime from, RepeatFrequency f) {
+  static DateTime nextOccurrence(DateTime from, RepeatFrequency f) {
     switch (f) {
       case RepeatFrequency.daily:
         return DateTime(from.year, from.month, from.day + 1);
@@ -290,7 +308,7 @@ class AppState extends ChangeNotifier {
     const cap = 120; // safety cap against e.g. a daily series years old
     for (final latest in latestBySeries.values) {
       var prev = latest;
-      var next = _nextOccurrence(
+      var next = nextOccurrence(
           DateTime(prev.date.year, prev.date.month, prev.date.day),
           prev.repeat);
       while (!next.isAfter(today) && posted < cap) {
@@ -306,7 +324,7 @@ class AppState extends ChangeNotifier {
         _transactions.add(t);
         posted++;
         prev = t;
-        next = _nextOccurrence(next, prev.repeat);
+        next = nextOccurrence(next, prev.repeat);
       }
     }
     if (posted > 0) _transactions.sort(_byDateDesc);
@@ -419,6 +437,8 @@ class AppState extends ChangeNotifier {
         'themeMode': themeMode.name,
         'currencyCode': currencyCode,
         'expectedBudget': expectedBudget?.toJson(),
+        'remindToSpend': remindToSpend,
+        'aiTips': aiTips,
         'transactions': _transactions.map((t) => t.toJson()).toList(),
         'budgetLimits': _budgetLimits.map((b) => b.toJson()).toList(),
         'savingsGoals': _savingsGoals.map((g) => g.toJson()).toList(),
@@ -440,6 +460,8 @@ class AppState extends ChangeNotifier {
     expectedBudget = ebJson is Map<String, dynamic>
         ? ExpectedBudget.fromJson(ebJson)
         : null;
+    remindToSpend = (data['remindToSpend'] as bool?) ?? true;
+    aiTips = (data['aiTips'] as bool?) ?? false;
     _transactions
       ..clear()
       ..addAll(((data['transactions'] as List?) ?? [])
@@ -492,6 +514,8 @@ class AppState extends ChangeNotifier {
     currencyCode = 'USD';
     AppCurrency.symbol = currencyForCode(currencyCode).symbol;
     expectedBudget = null;
+    remindToSpend = true;
+    aiTips = false;
     _transactions.clear();
     _budgetLimits.clear();
     _savingsGoals.clear();

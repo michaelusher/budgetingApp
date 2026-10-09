@@ -4,6 +4,8 @@ import 'package:budget_buddy/models/transaction.dart';
 import 'package:budget_buddy/constants/categories.dart';
 import 'package:budget_buddy/theme/app_theme.dart';
 import 'package:budget_buddy/widgets/responsive.dart';
+import 'package:budget_buddy/widgets/advisor_card.dart';
+import 'package:budget_buddy/services/budget_advisor.dart';
 
 class DashboardPage extends StatelessWidget {
   final AppState appState;
@@ -39,6 +41,8 @@ class DashboardPage extends StatelessWidget {
   Widget _buildNarrow(BuildContext context) {
     final theme = Theme.of(context);
     final advice = _getAdvice();
+    final showAdvisor =
+        advice.isNotEmpty || BudgetAdvisor(appState).tips().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,8 +51,8 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(height: 16),
         _heroBalanceCard(context),
         const SizedBox(height: 16),
-        if (advice.isNotEmpty) ...[
-          _adviceCard(context, advice),
+        if (showAdvisor) ...[
+          AdvisorCard(appState: appState, fallback: advice),
           const SizedBox(height: 16),
         ],
         if (appState.transactions.isNotEmpty) ...[
@@ -114,6 +118,8 @@ class DashboardPage extends StatelessWidget {
   Widget _buildWide(BuildContext context) {
     final theme = Theme.of(context);
     final advice = _getAdvice();
+    final showAdvisor =
+        advice.isNotEmpty || BudgetAdvisor(appState).tips().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,8 +128,8 @@ class DashboardPage extends StatelessWidget {
         const SizedBox(height: 20),
         _heroBalanceCard(context),
         const SizedBox(height: 20),
-        if (advice.isNotEmpty) ...[
-          _adviceCard(context, advice),
+        if (showAdvisor) ...[
+          AdvisorCard(appState: appState, fallback: advice),
           const SizedBox(height: 20),
         ],
         if (appState.transactions.isNotEmpty) ...[
@@ -551,52 +557,6 @@ class DashboardPage extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _adviceCard(BuildContext context, String advice) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppTokens.radiusSm),
-              ),
-              child: Icon(Icons.auto_awesome_rounded, color: primary, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Insight',
-                    style: TextStyle(
-                      color: primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    advice,
-                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

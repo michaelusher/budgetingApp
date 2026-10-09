@@ -4,6 +4,7 @@ import 'package:budget_buddy/state/app_state.dart';
 import 'package:budget_buddy/models/transaction.dart';
 import 'package:budget_buddy/models/expense_category.dart';
 import 'package:budget_buddy/constants/categories.dart';
+import 'package:budget_buddy/services/budget_advisor.dart';
 import 'package:budget_buddy/services/receipt_scanner.dart';
 import 'package:budget_buddy/services/smart_entry_parser.dart';
 import 'package:budget_buddy/theme/app_theme.dart';
@@ -209,7 +210,50 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     }
   }
 
-  void _submit() {
+  /// Always-on advisor check: asks before saving a nice-to-have purchase the
+  /// user can't comfortably afford. Returns true if the save should go ahead.
+  Future<bool> _confirmAffordable(double amount) async {
+    final editing = widget.editing;
+    final warning = BudgetAdvisor(widget.appState).checkPurchase(
+      _selectedCategory,
+      amount,
+      _selectedDate,
+      replacing: editing != null && editing.category.name == _selectedCategory.name
+          ? editing.amount
+          : 0,
+    );
+    if (warning == null) return true;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: AppColors.warning, size: 32),
+        title: Text(warning.title),
+        content: Text(warning.message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Add anyway'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Skip it'),
+          ),
+        ],
+      ),
+    );
+    if (proceed == true) return true;
+    // Dismissed without choosing: stay on the form so nothing typed is lost.
+    if (proceed == false && mounted) {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      Navigator.pop(context);
+      messenger?.showSnackBar(
+          const SnackBar(content: Text('Good call — purchase skipped.')));
+    }
+    return false;
+  }
+
+  Future<void> _submit() async {
     final title = _titleController.text.trim();
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
     if (title.isEmpty || amount <= 0) {
@@ -218,6 +262,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       );
       return;
     }
+    if (!await _confirmAffordable(amount) || !mounted) return;
     final note = _noteController.text.trim().isNotEmpty
         ? _noteController.text.trim()
         : null;

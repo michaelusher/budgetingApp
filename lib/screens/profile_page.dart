@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:budget_buddy/state/app_state.dart';
 import 'package:budget_buddy/constants/currencies.dart';
+import 'package:budget_buddy/services/receipt_scanner.dart';
 import 'package:budget_buddy/theme/app_theme.dart';
 import 'package:budget_buddy/widgets/responsive.dart';
 
@@ -138,6 +139,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   _sectionLabel(context, 'Currency'),
                   const SizedBox(height: 12),
                   _currencyPicker(context),
+                  const SizedBox(height: 24),
+                  _sectionLabel(context, 'Budget Advisor'),
+                  const SizedBox(height: 12),
+                  _advisorSection(context),
                   const SizedBox(height: 24),
                   _sectionLabel(context, 'Data'),
                   const SizedBox(height: 12),
@@ -377,6 +382,68 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  Widget _advisorSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = widget.appState;
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.shield_rounded, color: AppColors.warning),
+            title: const Text('Overspending warnings',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            subtitle: Text(
+              'Always on. Warns before entertainment or shopping purchases '
+              'when you\'re close to your budget, and reminds you to cover '
+              'rent and utilities first.',
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+            ),
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16, color: theme.dividerColor),
+          SwitchListTile(
+            value: s.remindToSpend,
+            onChanged: s.setRemindToSpend,
+            secondary:
+                const Icon(Icons.celebration_rounded, color: AppColors.success),
+            title: const Text('Remind me I can spend',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            subtitle: Text(
+              'Lets you know when you\'re well under budget and have room to '
+              'treat yourself.',
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+            ),
+          ),
+          Divider(height: 1, indent: 16, endIndent: 16, color: theme.dividerColor),
+          SwitchListTile(
+            value: s.aiTips,
+            onChanged: _setAiTips,
+            secondary: Icon(Icons.auto_awesome_rounded,
+                color: theme.colorScheme.primary),
+            title: const Text('AI-written tips',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            subtitle: Text(
+              'Rewords tips with Gemini using your receipt-scanning key. '
+              'Sends a short spending summary to Google.',
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setAiTips(bool value) async {
+    if (value && await ReceiptScanner.getApiKey() == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Add a Gemini key first — tap the scan icon when '
+            'adding an expense to set one up.'),
+      ));
+      return;
+    }
+    widget.appState.setAiTips(value);
   }
 
   Widget _dataSection(BuildContext context) {
